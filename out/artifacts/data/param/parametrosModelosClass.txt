@@ -1,0 +1,5 @@
+NaiveBayes
+LogisticRegression
+MPC
+DecisionTree
+RandomForest

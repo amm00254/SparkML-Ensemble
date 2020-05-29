@@ -1,0 +1,15 @@
+/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosLogisticRegression.txt
+/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosDecisionTree.txt
+/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosRandomForest.txt
+/home/simidat/amm00254/modelData/Bagging/BaggingCensus/BaggingCensus1/
+true
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTrain1.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTest1.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTrain2.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTest2.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTrain3.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTest3.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTrain4.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTest4.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTrain5.data
+hdfs://turing17.turing.ceatic.ujaen.es:8020/amm00254/datasets/Census/censusTest5.data
