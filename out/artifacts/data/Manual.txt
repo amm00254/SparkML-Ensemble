@@ -1,40 +1,40 @@
-parametrosArchivosES -> Ruta fichero parámetros método Logistic Regression
-			Ruta fichero parámetros método Decision Tree
-			Ruta fichero parámetros método Random Forest
-			Ruta donde se guardarán los modelos obtenidos del Ensemble Bagging
-			Variable booleana que indica si se usan particiones o no -> False: no se usan particiones, y la siguiente ruta que se pone es únicamente la ruta del dataset que contiene interiormente Test y Train juntos
-										    True: se usan particiones, y las siguientes rutas que se ponen son las de las particiones, intercalando una ruta de train y una de test
+parametrosArchivosES -> Path of the file parameters method Logistic Regression
+			Path of the file parameters method Decision Tree
+			Path of the file parameters method Random Forest
+			Path where the models obtained from the Ensemble Bagging will be stored
+			Boolean variable that indicates whether partitions are used or not-> False: no partitions are used, and the next path to put is only the path of the dataset that contains Test and Train together
+										             True: partitions are used, and the next routes that are put are those of the partitions, interspersing a train route and a test route
 
-parametrosModelosClass -> Se ponen por fila los nombres de los métodos que se deseen usar: SVM, MPC, LogisticRegression, NaiveBayes, RandomForest, DecisionTree, GBT, Isotonic
-			  A la hora de escoger métodos, debemos tener en cuenta como es nuestro dataset, ya que unos funcionan para clases binarias, y otros para multiclases
+parametrosModelosClass -> The names of the methods you want to use are put by row: SVM, MPC, LogisticRegression, NaiveBayes, RandomForest, DecisionTree, GBT, Isotonic
+    When choosing methods, we must take into account how our dataset is, since some work for binary classes, and others for multiclasses. And in each line of the file a method is specified
 			  Clasificación:
-				- SVM (Binarios)
-				- MPC (Binarios/Multiclase)
-				- LogisticRegression (Binarios)
-				- NaiveBayes (Binarios/Multiclase)
-				- RandomForest (Binarios/Multiclase)
-				- DecisionTree (Binarios/Multiclase)
+				- SVM (Binary)
+				- MPC (Binary/Multiclass)
+				- LogisticRegression (Binary)
+				- NaiveBayes (Binary/Multiclass)
+				- RandomForest (Binary/Multiclass)
+				- DecisionTree (Binary/Multiclass)
 			  Regresión:
-				- RandomForest (Reales)
-				- DecisionTree (Reales)
-				- GBT (Reales)
-				- Isotonic (Reales)
+				- RandomForest (Real)
+				- DecisionTree (Real)
+				- GBT (Real)
+				- Isotonic (Real)
 						  
 
-parametrosNumericos -> Parámetro que indica cuánto porcentaje del dataset real se quedará para Train. Teniendo en cuenta que usemos un dataset con Test y Train juntos
-		       Parámetro que indica cuánto porcentaje del dataset real se quedará para Test. Teniendo en cuenta que usemos un dataset con Test y Train juntos
-		       Número de clasificadores que deseamos que se ejecuten
-		       Porcentaje del dataset de Train que tendrán nuestros subdatasets que se enviarán a cada clasificador
-		       Número de particiones internas de Spark
+parametrosNumericos -> Parameter indicating how much percentage of the actual dataset will remain for Train. Taking into account that we use a dataset with Test and Train together
+		       Parameter indicating how much percentage of the actual dataset will remain for Test. Taking into account that we use a dataset with Test and Train together
+		       Number of classifiers that we want to run
+		       Percentage of the Train dataset that will have our subdatasets that will be sent to each classifier
+		       Number of internal Spark partitions
 					   
-parametrosCR -> Parámetro que indicará si queremos que se realice una clasificación o una regresión en nuestro Ensemble. Se debe poner: clasificacion o regresion
-	        En caso de regresion, los métodos del fichero parametrosModelosClass únicamente pueden ser: DecisionTree y RandomForest
+parametrosCR -> Parameter that will indicate if we want a classification or a regression to be performed in our Ensemble. It should be put: classification or regression
+                In case of regression, the methods of the file parametrosModelosClass can only be: DecisionTree and RandomForest, since they are the ones implemented for this type of datasets
 				
-parametrosLogisticRegression -> Número máximo de iteraciones
-				Parámetro de regularización
-				Parámetro de mezcla ElasticNet. Para alfa = 0, la penalización es una penalización L2. Para alfa = 1, es una penalización L1. Para alfa en (0,1), la penalización es una combinación de L1 y L2. El valor predeterminado es 0.0, que es una penalización L2
+parametrosLogisticRegression -> Maximum number of iterations
+				Regularization parameter
+				ElasticNet mixing parameter. For alpha = 0, the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty. For alpha at (0,1), the penalty is a combination of L1 and L2. The default value is 0.0, which is an L2 penalty
 					
-parametrosRandomForest -> Número de categorías máximas Vector Indexer
-			  Número de árboles
+parametrosRandomForest -> Number of maximum categories Vector Indexer
+			  Number of trees
 						  
-parametrosDecisionTree -> Número de categorías máximas Vector Indexer
+parametrosDecisionTree -> Number of maximum categories Vector Indexer
