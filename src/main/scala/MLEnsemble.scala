@@ -16,14 +16,14 @@ import scala.collection.mutable.ArrayBuffer
 object MLEnsemble {
 
   //-----------------------------------------------------------------------
-  //CARGA DE FICHERO Y MODIFICACIÓN DE VALORES NOMINALES POR NUMÉRICOS
+  //LOADING OF FILE AND MODIFICATION OF NOMINAL VALUES BY NUMERICAL
 
   /**
-   * FUNCIÓN CARGA DATASET Y TRANSFORMACIONES NECESARIAS
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @param archivoEntrada Conjunto de datos para cargar y transformar para su posterior utilización
-   * @param nParticion Número de particiones internas de Spark
-   * @return Conjunto de datos transformado
+   * DATASET LOAD FUNCTION AND NECESSARY TRANSFORMATIONS
+   * @param spark Object to get Spark functionality
+   * @param archivoEntrada Data set to load and transform for later use
+   * @param nParticion Number of internal Spark partitions
+   * @return Transformed dataset
    */
   def cargaDatosyModificacion(spark: SparkSession, archivoEntrada: String, classRegr: String, nParticion: Int): DataFrame = {
 
@@ -33,18 +33,18 @@ object MLEnsemble {
       .option("inferSchema","true")
       .load(archivoEntrada)
 
-    //Particiones internas de Spark
+    //Spark internal partitions
     DF = DF.repartition(nParticion)
 
     println("___________________________________________________________________")
-    println("Particiones: " + DF.rdd.partitions.size)
+    println("Partitions: " + DF.rdd.partitions.size)
     println("___________________________________________________________________")
 
     val columnas = DF.dtypes
     val columnaClase = columnas(columnas.length-1)._1.toString
     var claseNom = false
 
-    //Tratamos las columnas con dataType String
+    //Column handling with dataType String
     (0 to columnas.length - 1).map { i =>
 
       val dataType = DF.schema(columnas(i)._1).dataType
@@ -70,12 +70,12 @@ object MLEnsemble {
 
     }
 
-    //En el caso de que la columna de clases no fuera nominal tenemos que moverla para dejarla en última posición y castear su dataType
+    //In the event that the class column is not nominal we have to move it to leave it in last position and cast its dataType
     if(!claseNom) {
       DF = DF.withColumn("label", col(columnaClase).cast(DoubleType)).drop(columnaClase)
     }
 
-    //En el caso de disponer un conjunto de datos donde su columna clase tenga valores negativos deberemos tratarlo también para dejarlos positivos
+    //In the case of having a data set where its class column has negative values, we must also treat it to leave them positive
     if(classRegr == "clasificacion" && DF.select("label").filter(col("label") < 0).count() > 0) {
 
       DF = DF.withColumn("label", col("label").cast(StringType))
@@ -88,7 +88,7 @@ object MLEnsemble {
 
     }
 
-    //Agregamos los valores numéricos a un array dinámico, y posteriormente los pasamos a un array estático
+    //Add the numerical values ​​to a dynamic array, and then pass them to a static array
     var colNames = ArrayBuffer[String]()
 
     (0 to columnas.length - 2).map { i =>
@@ -97,19 +97,19 @@ object MLEnsemble {
 
     val colNamesStatic = colNames.toArray
 
-    //Casteamos los valores numéricos a tipo Double
+    //Casting numeric values ​​to Double type
     (0 to columnas.length - 2).map { i =>
       DF = DF.withColumn(columnas(i)._1, col(columnas(i)._1).cast(DoubleType))
     }
 
-    //Juntamos todos los atributos numéricos en un array
+    //Put all numeric attributes together in an array
     val assembler = new VectorAssembler()
       .setInputCols(colNamesStatic)
       .setOutputCol("features")
 
     val output = assembler.transform(DF)
 
-    //Normalizamos los valores de las características del conjunto de datos en un rango
+    //Normalize the values ​​of the characteristics of the data set in a range
     val scaler = new MinMaxScaler()
       .setInputCol("features")
       .setOutputCol("normFeatures")
@@ -119,7 +119,7 @@ object MLEnsemble {
     var scaledData = scalerModel.transform(output)
     scaledData = scaledData.drop("features").withColumnRenamed("normFeatures", "features")
 
-    //Borramos las columnas con los atributos numéricos aislados, y dejamos únicamente la que contiene los vectores de atributos numéricos
+    //Clear columns with isolated numeric attributes, leaving only the column containing the numeric attribute vectors
     (0 to columnas.length - 2).map { i =>
       scaledData = scaledData.drop(columnas(i)._1)
     }
@@ -132,15 +132,15 @@ object MLEnsemble {
   }
 
   //-----------------------------------------------------------------------
-  //FUNCIONES DE CLASIFICACIÓN Y REGRESIÓN
+  //CLASSIFICATION AND REGRESSION FUNCTIONS
 
   /**
-   * SVM: MÉTODO DE CLASIFICACIÓN PARA CONJUNTOS DE DATOS CON CLASES BINARIAS
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @return Dataframe de predicciones generadas
+   * SVM: CLASSIFICATION METHOD FOR DATA SETS WITH BINARY CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @return Dataframe of predictions
    */
   def SVM(trainingData: Array[DataFrame], testData: DataFrame, inicio: Int, fin: Int): DataFrame = {
 
@@ -179,14 +179,14 @@ object MLEnsemble {
   }
 
   /**
-   * MPC: MÉTODO DE CLASIFICACIÓN PARA CONJUNTOS DE DATOS CON CLASES BINARIAS Y MULTICLASES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param nClasses Variable que establecerá el número diferente de clases que contiene el conjunto de datos
-   * @param nFeatures Variable que establecerá el número de caracteristicas que contiene el conjunto de datos
-   * @return Dataframe de predicciones generadas
+   * MPC: CLASSIFICATION METHOD FOR DATA SETS WITH BINARY AND MULTI-CLASS CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param nClasses Variable that will set the different number of classes that the dataset contains
+   * @param nFeatures Variable that will set the different number of features that the dataset contains
+   * @return Dataframe of predictions
    */
   def MPC(trainingData: Array[DataFrame], testData: DataFrame, inicio: Int, fin: Int, nClasses: Int, nFeatures: Int): DataFrame = {
 
@@ -228,14 +228,14 @@ object MLEnsemble {
   }
 
   /**
-   * LOGISTIC REGRESSION: MÉTODO DE CLASIFICACIÓN PARA CONJUNTOS DE DATOS CON CLASES BINARIAS
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto  de datos de test
-   * @param path Ruta para cargar parámetros numéricos de Logistic Regression
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return Dataframe de predicciones generadas
+   * LOGISTIC REGRESSION: CLASSIFICATION METHOD FOR DATA SETS WITH BINARY CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param path Path to load numerical parameters from Logistic Regression
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param spark Object to get Spark functionality
+   * @return Dataframe of predictions
    */
   def LogisticRegression(trainingData: Array[DataFrame], testData: DataFrame, path: String, inicio: Int, fin: Int, spark: SparkSession): DataFrame = {
 
@@ -278,15 +278,15 @@ object MLEnsemble {
   }
 
   /**
-   * DECISION TREE: MÉTODO DE CLASIFICACIÓN PARA CONJUNTOS DE DATOS CON CLASES BINARIAS Y MULTICLASES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param DFOriginal Conjunto de datos original necesario para construir un Pipeline
-   * @param path Ruta para cargar parámetros numéricos de Decision Tree
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return Dataframe de predicciones generadas
+   * DECISION TREE: CLASSIFICATION METHOD FOR DATA SETS WITH BINARY AND MULTI-CLASS CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param DFOriginal Original data set needed to build a Pipeline
+   * @param path Path to load numerical parameters from Decision Tree
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param spark Object to get Spark functionality
+   * @return Dataframe of predictions
    */
   def DecisionTree(trainingData: Array[DataFrame], testData: DataFrame, DFOriginal: DataFrame, path: String, inicio: Int, fin: Int, spark: SparkSession): DataFrame = {
 
@@ -351,15 +351,15 @@ object MLEnsemble {
   }
 
   /**
-   * DECISION TREE REGRESSION: MÉTODO DE REGRESIÓN PARA CONJUNTOS DE DATOS CON CLASES REALES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param DFOriginal Conjunto de datos original necesario para construir un Pipeline
-   * @param path Ruta para cargar parámetros numéricos de Decision Tree
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return Dataframe de predicciones generadas
+   * DECISION TREE REGRESSION: REGRESSION METHOD FOR DATA SETS WITH REAL CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param DFOriginal Original data set needed to build a Pipeline
+   * @param path Path to load numerical parameters from Decision Tree
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param spark Object to get Spark functionality
+   * @return Dataframe of predictions
    */
   def DecisionTreeRegr(trainingData: Array[DataFrame], testData: DataFrame, DFOriginal: DataFrame, path: String, inicio: Int, fin: Int, spark: SparkSession): DataFrame = {
 
@@ -413,15 +413,15 @@ object MLEnsemble {
   }
 
   /**
-   * RANDOM FOREST: MÉTODO DE CLASIFICACIÓN PARA CONJUNTO DE DATOS CON CLASES BINARIAS Y MULTICLASES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param DFOriginal Conjunto de datos original necesario para construir un Pipeline
-   * @param path Ruta para cargar parámetros numéricos de Random Forest
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return Dataframe de predicciones generadas
+   * RANDOM FOREST: CLASSIFICATION METHOD FOR DATA SET WITH BINARY CLASSES AND MULTICLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param DFOriginal Original data set needed to build a Pipeline
+   * @param path Path to load numerical parameters from Random Forest
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param spark Object to get Spark functionality
+   * @return Dataframe of predictions
    */
   def RandomForest(trainingData: Array[DataFrame], testData: DataFrame, DFOriginal: DataFrame, path: String, inicio: Int, fin: Int, spark: SparkSession): DataFrame = {
 
@@ -488,15 +488,15 @@ object MLEnsemble {
   }
 
   /**
-   * RANDOM FOREST REGRESSION: MÉTODO PARA REGRESIÓN PARA CONJUNTOS DE DATOS CON CLASES REALES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param DFOriginal Conjunto de datos original necesario para construir un Pipeline
-   * @param path Ruta para cargar parámetros numéricos de Random Forest
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return Dataframe de predicciones generadas
+   * RANDOM FOREST REGRESSION: REGRESSION METHOD FOR DATA SETS WITH REAL CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param DFOriginal Original data set needed to build a Pipeline
+   * @param path Path to load numerical parameters from Random Forest
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @param spark Object to get Spark functionality
+   * @return Dataframe of predictions
    */
   def RandomForestRegr(trainingData: Array[DataFrame], testData: DataFrame, DFOriginal: DataFrame, path: String, inicio: Int, fin: Int, spark: SparkSession): DataFrame = {
 
@@ -551,13 +551,13 @@ object MLEnsemble {
   }
 
   /**
-   * GRADIENT BOOSTED TREE REGRESSION: MÉTODO PARA REGRESIÓN PARA CONJUNTOS DE DATOS CON CLASES REALES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param DFOriginal Conjunto de datos original necesario para construir un Pipeline
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @return Dataframe de predicciones generadas
+   * GRADIENT BOOSTED TREE REGRESSION: REGRESSION METHOD FOR DATA SETS WITH REAL CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param DFOriginal Original data set needed to build a Pipeline
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @return Dataframe of predictions
    */
   def GradientBTRegr(trainingData: Array[DataFrame], testData: DataFrame, DFOriginal: DataFrame, inicio: Int, fin: Int): DataFrame = {
 
@@ -611,12 +611,12 @@ object MLEnsemble {
   }
 
   /**
-   * MÉTODO ISOTONIC REGRESSION: MÉTODO PARA REGRESIÓN PARA CONJUNTO DE DATOS CON CLASES REALES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @return Dataframe de predicciones generadas
+   * MÉTODO ISOTONIC REGRESSION: REGRESSION METHOD FOR DATA SET WITH REAL CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @return Dataframe of predictions
    */
   def IsotonicRegr(trainingData: Array[DataFrame], testData: DataFrame, inicio: Int, fin: Int): DataFrame = {
 
@@ -653,12 +653,12 @@ object MLEnsemble {
   }
 
   /**
-   * MÉTODO NAIVE BAYES: MÉTODO PARA CLASIFICACIÓN PARA CONJUNTOS DE DATOS CON CLASES BINARIAS Y MULTICLASES
-   * @param trainingData Array de conjunto de datos de entrenamiento
-   * @param testData Conjunto de datos de test
-   * @param inicio Variable para coger un conjunto de datos del array del conjunto de datos
-   * @param fin Variable para coger un conjunto de datos del array del conjunto de datos
-   * @return Dataframe de predicciones generadas
+   * MÉTODO NAIVE BAYES: CLASSIFICATION METHOD FOR DATA SETS WITH BINARY AND MULTI-CLASS CLASSES
+   * @param trainingData Training dataset array
+   * @param testData Test dataset
+   * @param inicio Variable to take a dataset from the dataset array
+   * @param fin Variable to take a dataset from the dataset array
+   * @return Dataframe of predictions
    */
   def NaiveBayes(trainingData: Array[DataFrame], testData: DataFrame, inicio: Int, fin: Int): DataFrame = {
 
@@ -694,23 +694,23 @@ object MLEnsemble {
   }
 
   //-----------------------------------------------------------------------
-  //FUNCIONES NECESARIAS
+  //NECESSARY FUNCTIONS
   /**
-   * FUNCIÓN PARA CASTEAR UN VALOR A ENTERO
-   * @param v Valor de una determinada fila
-   * @return Valor casteado a entero
+   * FUNCTION TO CHANGE A VALUE TO INT
+   * @param v Value of a certain row
+   * @return Value changed to int
    */
   def sqlRowToInt(v: org.apache.spark.sql.Row): Int = {
     v.get(0).toString.toDouble.toInt
   }
 
   /**
-   * FUNCIÓN PARA OBTENER LOS RESULTADOS AL EMPLEAR MÉTODOS DE CLASIFICACIÓN Y DEL ENSEMBLE FINAL
-   * @param informacion Nombre que queremos mostrar del clasificador
-   * @param columnaLabel Columna label que se empleará del dataframe
-   * @param columnaPrediction Columna predicción que se empleará del dataframe
-   * @param prediccion Dataframe del clasificador
-   * @param nClasificador Entero para saber de que número de clasificador se esta tratando, para mostrar información
+   * FUNCTION TO OBTAIN THE RESULTS BY USING CLASSIFICATION METHODS AND THE FINAL ASSEMBLY
+   * @param informacion Name that we want to display of the classifier
+   * @param columnaLabel Label column to be used for the dataframe
+   * @param columnaPrediction Prediction column to be used for the dataframe
+   * @param prediccion Classifier dataframe
+   * @param nClasificador Integer to know what classifier number is being treated, to show information
    */
   def resultadosClasificador(informacion: String, columnaLabel: String, columnaPrediction: String, prediccion: DataFrame, nClasificador: Int): Unit = {
 
@@ -736,12 +736,12 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA OBTENER LOS RESULTADOS AL EMPLEAR MÉTODOS DE REGRESIÓN Y DEL ENSEMBLE FINAL
-   * @param informacion Nombre que queremos mostrar del clasificador
-   * @param columnaLabel Columna label que se empleará del dataframe
-   * @param columnaPrediction Columna predicción que se empleará del dataframe
-   * @param prediccion Dataframe del clasificador
-   * @param nClasificador Entero para saber de que número de clasificador se esta tratando, para mostrar información
+   * FUNCTION FOR OBTAINING RESULTS BY USING REGRESSION METHODS AND THE FINAL ASSEMBLY
+   * @param informacion Name that we want to display of the classifier
+   * @param columnaLabel Label column to be used for the dataframe
+   * @param columnaPrediction Prediction column to be used for the dataframe
+   * @param prediccion Regression dataframe
+   * @param nClasificador Integer to know what classifier number is being treated, to show information
    */
   def resultadosRegresor(informacion: String, columnaLabel: String, columnaPrediction: String, prediccion: DataFrame, nClasificador: Int): Unit = {
 
@@ -784,9 +784,9 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA MOSTRAR TIEMPOS EMPLEADOS EN UNA DETERMINADA ACCIÓN
-   * @param time Tiempo que debé haber sido previamente generado
-   * @param dato Información para reconocer la toma de tiempos en un lugar específico
+   * FUNCTION TO SHOW TIMES USED IN A CERTAIN ACTION
+   * @param time Time that should have been previously generated
+   * @param dato Information to recognize the taking of times in a specific place
    */
   def tiempo(time: Long, dato: String) {
 
@@ -799,9 +799,9 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA GUARDAR NUESTRO MODELO DEL ENSEMBLE DE CLASIFICACIÓN EN UNA RUTA ESTABLECIDA PREVIAMENTE
-   * @param path Ruta donde se guardará el modelo
-   * @param arrayDatos Modelo que será una lista de enteros para poder guardarla correctamente
+   * FUNCTION TO SAVE OUR MODEL OF CLASSIFICATION ASSEMBLY ON A PREVIOUSLY ESTABLISHED ROUTE
+   * @param path Path where the model will be saved
+   * @param arrayDatos Model that will be a list of integers to be able to save it correctly
    */
   def savePredictionEnsembleClass(path: String, arrayDatos: List[Int]): Unit = {
 
@@ -815,9 +815,9 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA GUARDAR NUESTRO MODELO DEL ENSEMBLE DE REGRESIÓN EN UNA RUTA ESTABLECIDA PREVIAMENTE
-   * @param path Ruta donde se guardará el modelo
-   * @param arrayDatos Modelo que será una lista de dobles para poder guardarla correctamente
+   * FUNCTION TO SAVE OUR MODEL OF THE REGRESSION ASSEMBLY ON A PREVIOUSLY ESTABLISHED ROUTE
+   * @param path Path where the model will be saved
+   * @param arrayDatos Model that will be a list of integers to be able to save it correctly
    */
   def savePredictionEnsembleRegr(path: String, arrayDatos: List[Double]): Unit = {
 
@@ -831,10 +831,10 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA CARGAR NUESTRO MODELO DEL ENSEMBLE CLASIFICACIÓN/REGRESIÓN DESDE LA RUTA DONDE PREVIAMENTE LO GUARDAMOS
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @param archivoEntrada Ruta donde se encuentra el modelo
-   * @return Dataframe del modelo del Ensemble
+   * FUNCTION TO LOAD OUR MODEL OF THE ASSEMBLY CLASSIFICATION / RETURN FROM THE ROUTE WHERE WE PREVIOUSLY SAVED IT
+   * @param spark Object to get Spark functionality
+   * @param archivoEntrada Path where the model is located
+   * @return Ensemble model dataframe
    */
   def cargaDatosModeloEnsemble(spark: SparkSession, archivoEntrada: String): DataFrame = {
 
@@ -845,7 +845,7 @@ object MLEnsemble {
 
     val columnas = DF.dtypes
 
-    //Casteamos los valores numéricos a tipo Double
+    //Change numeric values ​​to type Double
     (0 to columnas.length - 1).map { i =>
       DF = DF.withColumn(columnas(i)._1, col(columnas(i)._1).cast(DoubleType))
     }
@@ -857,11 +857,11 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN QUE NOS PERMITE UNIR TODAS LAS PREDICCIONES GENERADAS POR TODOS LOS MÉTODOS DE CLASIFICACIÓN/REGRESIÓN EMPLEADOS
-   * @param arrayDF Array de dataframe de predicciones
-   * @param testData Conjunto de datos de test
-   * @param spark Objeto para obtener la funcionalidad de Spark
-   * @return RDD de vectores por filas del array de predicciones (Un vector contiene los elementos de una de todas las predicciones)
+   * FUNCTION THAT ALLOWS US TO UNITE ALL THE PREDICTIONS GENERATED BY ALL THE CLASSIFICATION / REGRESSION METHODS USED
+   * @param arrayDF Prediction dataframe array
+   * @param testData Test dataset
+   * @param spark Object to get Spark functionality
+   * @return Row Vector RDD of Prediction Array (A vector contains the elements of one of all predictions)
    */
   def unionDF(arrayDF: ArrayBuffer[DataFrame], testData: DataFrame, spark: SparkSession): RDD[DenseVector]  = {
 
@@ -888,10 +888,10 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA CLASIFICAR POR VOTO LAS PREDICCIONES DE LOS MÉTODOS DE CLASIFICACIÓN EMPLEADOS
-   * @param predictionRDD RDD de vectores de las predicciones
-   * @param nClasses Número de clases del conjunto de datos
-   * @return RDD de enteros, donde cada elemento es el ganador por voto
+   * FUNCTION TO VOTE CLASSIFICATION OF THE PREDICTIONS OF THE CLASSIFICATION METHODS USED
+   * @param predictionRDD RDD vector predictions
+   * @param nClasses Number of classes in the dataset
+   * @return RDD of integers, where each element is the winner by vote
    */
   def clasificacionRow(predictionRDD: RDD[linalg.DenseVector], nClasses: Int): RDD[Int] = {
 
@@ -903,9 +903,9 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA OBTENER LA MEDIA DE LAS PREDICCIONES DE LOS MÉTODOS DE REGRESIÓN EMPLEADOS
-   * @param predictionRDD RDD de vectores de las predicciones
-   * @return RDD de dobles, donde cada elemento es la media de todos los elementos que formaban su fila de predicciones
+   * FUNCTION TO OBTAIN THE AVERAGE OF THE PREDICTIONS OF THE EMPLOYED REGRESSION METHODS
+   * @param predictionRDD RDD vector predictions
+   * @return RDD of doubles, where each element is the mean of all the elements that made up its row of predictions
    */
   def regressionRow(predictionRDD: RDD[linalg.DenseVector]): RDD[Double] = {
 
@@ -916,11 +916,11 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCIÓN PARA OBTENER UN SUBCONJUNTO DE DATOS DE ENTRENAMIENTO
-   * @param trainingData Conjunto de datos de entrenamiento original
-   * @param n Número de subconjuntos de datos que se nos generarán
-   * @param porcentaje Porcentaje del conjunto de datos de entrenamiento original que contendrán los subconjuntos de datos
-   * @return Array de dataframes, que serán los subconjuntos de datos de entrenamiento
+   * FUNCTION TO OBTAIN A SUB-SET OF TRAINING DATA
+   * @param trainingData Original training data set
+   * @param n Number of subsets of data that will be generated for us
+   * @param porcentaje Percentage of original training dataset that will contain subsets of data
+   * @return Array of dataframes, which will be the subsets of training data
    */
   def bootstrap(trainingData: DataFrame, n: Int, porcentaje: Double): Array[DataFrame] = {
 
@@ -941,20 +941,20 @@ object MLEnsemble {
   //-----------------------------------------------------------------------
   //ENSEMBLE
   /**
-   * FUNCIÓN PRINCIPAL QUE REALIZA EL ENSEMBLE BAGGING
-   * @param n Número de métodos de clasificación/regresión empleados
-   * @param m Número de subconjuntos de datos que se nos generarán
-   * @param porcentaje Porcentaje del conjunto de datos de entrenamiento original que contendrán los subconjuntos de datos
-   * @param modelosClass Array de los métodos de clasificación/regresión
-   * @param paramArchivos Array con los parámetros de archivos necesarios
-   * @param trainingData Conjunto de datos de entrenamiento original
-   * @param testData Conjunto de datos de test
-   * @param nClasses Número de clases del conjunto de datos
-   * @param nFeatures Número de características del conjunto de datos
-   * @param DF Conjunto de datos original
-   * @param nBagging Número de ejecución Bagging que se está realizando
-   * @param classRegr String que nos verifica si se está empleando una clasificación o una regresión
-   * @param spark Objeto para obtener la funcionalidad de Spark
+   * MAIN FUNCTION PERFORMED BY THE ENSEMBLE BAGGING
+   * @param n Number of classification / regression methods used
+   * @param m Number of subsets of data that will be generated for us
+   * @param porcentaje Percentage of the original training dataset that will contain the data subsets
+   * @param modelosClass Array of classification / regression methods
+   * @param paramArchivos Array with the necessary file parameters
+   * @param trainingData Original training data set
+   * @param testData Test dataset
+   * @param nClasses Number of classes in the dataset
+   * @param nFeatures Number of features in the dataset
+   * @param DF Original dataset
+   * @param nBagging Bagging run number being performed
+   * @param classRegr String that checks if a classification or a regression is being used
+   * @param spark Object to get Spark functionality
    */
   def bagging(n: Int, m: Int, porcentaje: Double, modelosClass: Array[String], paramArchivos: Array[String], trainingData: DataFrame,
               testData: DataFrame, nClasses: Int, nFeatures: Int, DF: DataFrame, nBagging: Int, classRegr: String, spark: SparkSession): Unit = {
@@ -1131,10 +1131,10 @@ object MLEnsemble {
     val spark = SparkSession
       .builder()
       .appName("Spark SQL data")
-      //.config("spark.master", "local") //Descomentar esta línea si se quiere realizar una ejecución en local
+      //.config("spark.master", "local") //Uncomment this line if you want to run locally
       .getOrCreate()
 
-    //Las rutas habría que modificarlas según el usuario que ejecute el programa y su ubicación del proyecto y archivos
+    //These routes should be modified according to the user who runs the program and their location of the project and files
     val paramNumericos = spark.sparkContext.textFile("/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosNumericos.txt").collect()
 
     val paramModelosClass = spark.sparkContext.textFile("/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosModelosClass.txt").collect()
@@ -1143,7 +1143,7 @@ object MLEnsemble {
 
     val paramCR= spark.sparkContext.textFile("/home/simidat/amm00254/SparkML-Ensemble/out/artifacts/data/param/parametrosCR.txt").collect()
 
-    //En el caso de tratar un conjunto de datos con train y test juntos
+    //In the case of treating a data set with train and test together
     if(paramArchivos(4) == "false") {
 
       println("___________________________________________________________________")
@@ -1169,7 +1169,7 @@ object MLEnsemble {
 
       tiempo(timeEnsembleBagging, "Tiempo realización Ensemble Bagging")
 
-      //En el caso de tratar con conjuntos de datos ya particionados
+      //In the case of dealing with already partitioned data sets
     } else {
 
       var inicio = 4
