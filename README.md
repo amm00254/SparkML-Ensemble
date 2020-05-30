@@ -1,8 +1,8 @@
 # Authors
 
-María Dolores Pérez Godoy: lperez@ujaen.es
-Antonio Jesús Rivera Rivas: arivera@ujaen.es
-Alberto Moreno Molina: amm00254@red.ujaen.es
+- María Dolores Pérez Godoy: lperez@ujaen.es
+- Antonio Jesús Rivera Rivas: arivera@ujaen.es
+- Alberto Moreno Molina: amm00254@red.ujaen.es
 
 # Ensembles Development
 
