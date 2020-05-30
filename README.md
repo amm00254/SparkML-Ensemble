@@ -1,30 +1,36 @@
-# Desarrollo de Ensembles
+# Authors
 
-Tratamiento de diversos conjuntos de datos para poder trabajar posteriormente de forma cómoda y más eficientemente, aplicándoles diversos métodos de la librería de ML.
-Implementación y aplicación del Ensemble Bagging.
+María Dolores Pérez Godoy: lperez@ujaen.es
+Antonio Jesús Rivera Rivas: arivera@ujaen.es
+Alberto Moreno Molina: amm00254@red.ujaen.es
 
-Información sobre [ML](https://spark.apache.org/docs/latest/ml-guide.html). 
+# Ensembles Development
 
-## Características
+Treatment of different data sets to be able to work later comfortably and more efficiently, applying various methods from the ML library.
+Implementation and application of the Ensemble Bagging.
 
-SparkML-Ensemble permite la realización del Ensemble Bagging:
+Information about [ML](https://spark.apache.org/docs/latest/ml-guide.html). 
 
-- **Carga y modificación del conjunto de datos**: Hay muchas variedades de conjuntos de datos, por lo que debemos tener una idea universal para poder tratar a todos de una forma u otra con el fin de que puedan ser tratados posteriormente de forma correcta y eficiente tantos por los diversos métodos de ML como por el Ensemble.
-- **Particionamiento**: Permite el uso de particionamiento interno de Spark, lo que nos permitiría reducir los tiempos empleados al realizar ejecuciones con los distintos conjuntos de datos.
-- ** Empleo de diversos métodos de ML**: En una misma ejecución del software, se pueden emplear diversos métodos de la biblioteca de ML, y que se apliquen tantas veces como deseemos.
-- **Clasificación por voto o media**: Se ha desarrollado para que funcione tanto con conjuntos de datos de clasificación como de regresión. Una vez empleados un número determinado de clasificadores o regresores, el programa es capaz de juntar todas las predicciones para realizar una clasificación por voto o una regresión por media, que será la que tome el Ensemble finalmente para obtener un modelo y resultados finales.
+## Features
 
-## Esquema del Ensemble Bagging
+SparkML-Ensemble allows the realization of the Ensemble Bagging:
 
-![Estructura del Ensemble Bagging](https://i.ibb.co/L01K0t7/EBagging.jpg)
+- **Loading and modifying the dataset**: There are many varieties of data sets, so we must have a universal idea to be able to treat everyone in one way or another so that they can be subsequently treated correctly and efficient as much for the various ML methods as for the Ensemble.
+- **Partitions**: Allows the use of internal Spark partitioning, which would allow us to reduce the time spent executing with different data sets.
+- **Use of various ML methods**: In the same execution of the software, you can use various methods of the ML library, and they are applied as many times as we want.
+- **Classification by vote or average**: It has been developed to work with both classification and regression datasets. Once a certain number of classifiers or regressors are used, the program is able to gather all the predictions to carry out a classification by vote or a regression by average, which will be the one that the Ensemble will finally take to obtain a model and final results.
 
-## Esquema UML del sofware desarrollado
+## Ensemble Bagging Outline
+
+![Ensemble Bagging Structure](https://i.ibb.co/L01K0t7/EBagging.jpg)
+
+## UML scheme of the developed software
 
 ![UML](https://i.ibb.co/sVxwkGC/uml.jpg)
 
-## Archivo .sbt
+## File .sbt
 
-Hay que configurarlo de la siguiente manera para que funcione correctamente:
+You have to configure it as follows to work correctly:
 
 **SBT:**
 
@@ -40,80 +46,80 @@ libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.4.0"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.4.5"
 ```
 
-## Archivos de parámetros del software
+## Software parameter files
 
-Los archivos de parámetros se encuentran dentro de una carpeta denominada **data**, en la ruta **SparkML-Ensemble/out/artifacts/data**, junto a la carpeta donde se encuentra el archivo **.jar**
+The parameter files are located in a folder named **data**, at the path **SparkML-Ensemble/out/artifacts/data**, next to the folder where the file **.jar** is located.
 
 **parametrosArchivosES:**
 
--	Ruta del fichero parámetros método Logistic Regression.
--	Ruta del fichero parámetros método Decision Tree.
--	Ruta del fichero parámetros método Random Forest.
--	Ruta donde se guardarán los modelos obtenidos del Ensemble Bagging.
--	Variable booleana que indica si se usan particiones o no :
-		- False: no se usan particiones, y la siguiente ruta que se pone es únicamente la ruta del dataset que contiene interiormente Test y Train juntos.
-		- True: se usan particiones, y las siguiente rutas que se ponen son las de las particiones, intercalando una ruta de train y una de test.
+-	Path of the file parameters method Logistic Regression.
+-	Path of the file parameters method Decision Tree.
+-	Path of the file parameters method Random Forest.
+-	Path where the models obtained from the Ensemble Bagging will be stored.
+-	Boolean variable that indicates whether partitions are used or not:
+		- False: no partitions are used, and the next path to put is only the path of the dataset that contains Test and Train together.
+		- True: partitions are used, and the next routes that are put are those of the partitions, interspersing a train route and a test route.
 
 **parametrosModelosClass:**
 
--	Se ponen por fila los nombres de los métodos que se deseen usar: **SVM, MPC, LogisticRegression, NaiveBayes, RandomForest, DecisionTree, GBT, Isotonic**.
-    A la hora de escoger métodos, debemos tener en cuenta como es nuestro dataset, ya que unos funcionan para clases binarias, y otros para multiclases. Y en cada línea del archivo se especifica un método.
+-	The names of the methods you want to use are put by row: **SVM, MPC, LogisticRegression, NaiveBayes, RandomForest, DecisionTree, GBT, Isotonic**.
+    When choosing methods, we must take into account how our dataset is, since some work for binary classes, and others for multiclasses. And in each line of the file a method is specified.
 
-|             Métodos              |            Tipos de clase           |
+|              Methods             |             Class types             |
 | ---------------------------------|-------------------------------------|
-| Linear Support Vector Machine    | Binarios                            |
-| Multilayer Perceptron Classifier | Binarios / Multiclase               |
-| Logistic Regression              | Binarios                            |
-| Naive Bayes                      | Binarios / Multiclase / Reales      |
-| Decision Tree                    | Binarios / Multiclase / Reales      |
-| Gradient Boosted Classifier      | Reales                              |
-| Isotonic                         | Reales                              |
-| Random Forest                    | Binarios / Multiclase               |
+| Linear Support Vector Machine    | Binary                              |
+| Multilayer Perceptron Classifier | Binary / Multiclass                 |
+| Logistic Regression              | Binary                              |
+| Naive Bayes                      | Binary / Multiclass / Real          |
+| Decision Tree                    | Binary / Multiclass / Real          |
+| Gradient Boosted Classifier      | Real                                |
+| Isotonic                         | Real                                |
+| Random Forest                    | Binary / Multiclass                 |
 
 **parametrosNumericos:**
 
--	Parámetro que indica cuánto porcentaje del dataset real se quedará para Train. Teniendo en cuenta que usemos un dataset con Test y Train juntos.
--	Parámetro que indica cuánto porcentaje del dataset real se quedará para Test. Teniendo en cuenta que usemos un dataset con Test y Train juntos.
--	Número de clasificadores que deseamos que se ejecuten.
--	Porcentaje del dataset de Train que tendrán nuestros subdatasets que se enviarán a cada clasificador.
--	Número de particiones internas de Spark.
+-	Parameter indicating how much percentage of the actual dataset will remain for Train. Taking into account that we use a dataset with Test and Train together.
+-	Parameter indicating how much percentage of the actual dataset will remain for Test. Taking into account that we use a dataset with Test and Train together.
+-	Number of classifiers that we want to run.
+-	Percentage of the Train dataset that will have our subdatasets that will be sent to each classifier.
+-	Number of internal Spark partitions.
 
 **parametrosCR:**
 
--	Parámetro que indicará si queremos que se realice una clasificación o una regresión en nuestro Ensemble. Se debe poner: clasificacion o regresion.
-    En caso de regresion, los métodos del fichero parametrosModelosClass únicamente pueden ser: DecisionTree y RandomForest, ya que son los implementados para este tipo de datasets.	
+-	Parameter that will indicate if we want a classification or a regression to be performed in our Ensemble. It should be put: classification or regression.
+    In case of regression, the methods of the file parametrosModelosClass can only be: DecisionTree and RandomForest, since they are the ones implemented for this type of datasets.
 
 **parametrosLogisticRegression:**
 
--	Número máximo de iteraciones
--	Parámetro de regularización
--	Parámetro de mezcla ElasticNet. Para alfa = 0, la penalización es una penalización L2. Para alfa = 1, es una penalización L1. Para alfa en (0,1), la penalización es una combinación de L1 y L2. El valor predeterminado es 0.0, que es una penalización L2	
+-	Maximum number of iterations
+-	Regularization parameter
+-	ElasticNet mixing parameter. For alpha = 0, the penalty is an L2 penalty. For alpha = 1, it is an L1 penalty. For alpha at (0,1), the penalty is a combination of L1 and L2. The default value is 0.0, which is an L2 penalty
 
 **parametrosRandomForest:**
 
--	Número de categorías máximas Vector Indexer
--	Número de árboles	
+-	Number of maximum categories Vector Indexer
+-	Number of trees
 
 **parametrosDecisionTree:**
 
-•	Número de categorías máximas Vector Indexer
+-	Number of maximum categories Vector Indexer
 
-## Cambios importantes en los ficheros de parámetros
+## Important changes in the parameter files
 
-Si no modificamos los ficheros de parámetros de los métodos, se quedarán por defecto como están, pero los que si son importantes cambiar son:
+If we do not modify the parameter files of the methods, they will remain by default as they are, but the ones that are important to change are:
 
--	Rutas de los datasets a ejecutar.
--	Métodos de modelos que se quieran ejecutar.
--	Número de clasificadores.
--	Porcentaje que se cogerá del conjunto de datos de entrenamiento para los subconjuntos de datos.
--	Número de particiones.
+-	Dataset paths to execute.
+-	Model methods that you want to execute.
+-	Number of classifiers.
+-	Percentage to be taken from the training dataset for the data subsets.
+-	Number of partitions.
 
-Dentro de IntelliJ IDEA, seleccionaremos nuestro proyecto el cual contiene nuestra aplicación, y deberemos generar un jar para que pueda ser lanzado desde el servidor: **File -> Project Structure -> Artifacts -> + -> jar -> From modules with dependencies.. -> Seleccionamos nuestra clase -> Apply/Ok**
-Y debemos construir el jar: **Build -> Build Artifacts -> Seleccionamos jar -> Build**
+Within IntelliJ IDEA, we will select our project which contains our application, and we must generate a jar so that it can be launched from the server: **File -> Project Structure -> Artifacts -> + -> jar -> From modules with dependencies.. -> Select our class -> Apply/Ok**
+And we must build the jar: **Build -> Build Artifacts -> Select jar -> Build**
 
-### Lanzamiento del software en el servidor
+### Software release on the server
 
-Configuración de dos archivos para su correcta ejecución:
+Configuration of two files for correct execution:
 
 **.sh:**
 
@@ -134,4 +140,4 @@ $SBATCH --error=path/salidaResultado_%j.err
 path/archivo.sh
 ```
 
-Muy importante a la hora de lanzar la ejecución en el servidor que la versión que tengamos de Spark Scala tanto en el proyecto Intellij como en el servidor sea idéntica.
+Very important when launching the execution on the server that the version we have of Spark Scala both in the Intellij project and on the server is identical.
