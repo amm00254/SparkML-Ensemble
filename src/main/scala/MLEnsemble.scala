@@ -125,7 +125,9 @@ object MLEnsemble {
     }
 
     val reorderColumns = Array("features", "label")
-    val DFResult = scaledData.select(reorderColumns.head, reorderColumns.tail: _*)
+    var DFResult = scaledData.select(reorderColumns.head, reorderColumns.tail: _*)
+
+    DFResult = DFResult.dropDuplicates("features")
 
     DFResult
 
@@ -151,30 +153,29 @@ object MLEnsemble {
     // Fit the model
     val lsvcModel = lsvc.fit(trainingData(inicio))
 
-    val modelo = lsvcModel.transform(testData)
-
-    var predictions = modelo.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modelo = lsvcModel.transform(testData).drop("rawPrediction")
 
     resultadosClasificador(s"Clasificador SVM: ", "label", "prediction", modelo, inicio)
+
+    modelo = modelo.withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin){
 
       val model = lsvc.fit(trainingData(i))
-      val modeloLoop = model.transform(testData)
-      var colPrediction = modeloLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloLoop = model.transform(testData)
 
       resultadosClasificador(s"Clasificador SVM: ", "label", "prediction", modeloLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloLoop = modeloLoop.drop("rawPrediction", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modelo = modelo.join(modeloLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modelo, modelo.columns.takeRight(modelo.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/SVMPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modelo
 
   }
 
@@ -200,30 +201,29 @@ object MLEnsemble {
 
     val MPCmodel = trainer.fit(trainingData(inicio))
 
-    val modelo = MPCmodel.transform(testData)
-
-    var predictions = modelo.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modelo = MPCmodel.transform(testData).drop("rawPrediction", "probability")
 
     resultadosClasificador(s"Clasificador Multilayer Perceptron: ", "label", "prediction", modelo, inicio)
+
+    modelo = modelo.withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin){
 
       val model = trainer.fit(trainingData(i))
-      val modeloLoop = model.transform(testData)
-      var colPrediction = modeloLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloLoop = model.transform(testData)
 
       resultadosClasificador(s"Clasificador Multilayer Perceptron: ", "label", "prediction", modeloLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloLoop = modeloLoop.drop("rawPrediction", "probability", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modelo = modelo.join(modeloLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modelo, modelo.columns.takeRight(modelo.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/MPCPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modelo
 
   }
 
@@ -250,30 +250,29 @@ object MLEnsemble {
     val lrModel = lr.fit(trainingData(inicio))
 
     // Select example rows to display.
-    val modelo = lrModel.transform(testData)
-
-    var predictions = modelo.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modelo = lrModel.transform(testData).drop("rawPrediction", "probability")
 
     resultadosClasificador(s"Clasificador Logistic Regression: ", "label", "prediction", modelo, inicio)
+
+    modelo = modelo.withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin){
 
       val model = lr.fit(trainingData(i))
-      val modeloLoop = model.transform(testData)
-      var colPrediction = modeloLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloLoop = model.transform(testData)
 
       resultadosClasificador(s"Clasificador Logistic Regression: ", "label", "prediction", modeloLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloLoop = modeloLoop.drop("rawPrediction", "probability", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modelo = modelo.join(modeloLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modelo, modelo.columns.takeRight(modelo.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/LRPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modelo
 
   }
 
@@ -323,30 +322,29 @@ object MLEnsemble {
     val model = pipeline.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloDTree = model.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
-
-    var predictions = modeloDTree.select("predictedLabel").withColumnRenamed("predictedLabel", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloDTree = model.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
 
     resultadosClasificador(s"Clasificador Decision Tree: ", "indexedLabel", "prediction", modeloDTree, inicio)
+
+    modeloDTree = modeloDTree.drop("indexedLabel", "indexedFeatures", "rawPrediction", "probability", "prediction").withColumnRenamed("predictedLabel", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = pipeline.fit(trainingData(i))
-      val modeloDTreeLoop = modelLoop.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
-      var colPrediction = modeloDTreeLoop.select("predictedLabel").withColumnRenamed("predictedLabel", "prediction" + i)
+      var modeloDTreeLoop = modelLoop.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
 
       resultadosClasificador(s"Clasificador Decision Tree: ", "indexedLabel", "prediction", modeloDTreeLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloDTreeLoop = modeloDTreeLoop.drop("label", "indexedLabel", "indexedFeatures", "rawPrediction", "probability", "prediction").withColumnRenamed("predictedLabel", "prediction" + i)
+
+      modeloDTree = modeloDTree.join(modeloDTreeLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloDTree, modeloDTree.columns.takeRight(modeloDTree.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/DecisionTreePredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloDTree
 
   }
 
@@ -385,30 +383,29 @@ object MLEnsemble {
     val model = pipeline.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloDTreeR = model.transform(testData)
-
-    var predictions = modeloDTreeR.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloDTreeR = model.transform(testData)
 
     resultadosRegresor(s"Regresor Decision Tree Regression: ", "label", "prediction", modeloDTreeR, inicio)
+
+    modeloDTreeR = modeloDTreeR.drop( "indexedFeatures").withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = pipeline.fit(trainingData(i))
-      val modeloDTreeRLoop = modelLoop.transform(testData)
-      var colPrediction = modeloDTreeRLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloDTreeRLoop = modelLoop.transform(testData)
 
       resultadosRegresor(s"Regresor Decision Tree Regression: ", "label", "prediction", modeloDTreeRLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloDTreeRLoop = modeloDTreeRLoop.drop( "indexedFeatures", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modeloDTreeR = modeloDTreeR.join(modeloDTreeRLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloDTreeR, modeloDTreeR.columns.takeRight(modeloDTreeR.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/DecisionTreeRegressionPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloDTreeR
 
   }
 
@@ -460,30 +457,29 @@ object MLEnsemble {
     val model = pipeline.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloRF = model.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
-
-    var predictions = modeloRF.select("predictedLabel").withColumnRenamed("predictedLabel", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloRF = model.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
 
     resultadosClasificador(s"Clasificador Random Forest: ", "indexedLabel", "prediction", modeloRF, inicio)
+
+    modeloRF = modeloRF.drop("indexedLabel", "indexedFeatures", "rawPrediction", "probability", "prediction").withColumnRenamed("predictedLabel", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = pipeline.fit(trainingData(i))
-      val modeloRFLoop = modelLoop.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
-      var colPrediction = modeloRFLoop.select("predictedLabel").withColumnRenamed("predictedLabel", "prediction" + i)
+      var modeloRFLoop = modelLoop.transform(testData).withColumn("predictedLabel", col("predictedLabel").cast(DoubleType))
 
       resultadosClasificador(s"Clasificador Random Forest: ", "indexedLabel", "prediction", modeloRFLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloRFLoop = modeloRFLoop.drop("label", "indexedLabel", "indexedFeatures", "rawPrediction", "probability", "prediction").withColumnRenamed("predictedLabel", "prediction" + i)
+
+      modeloRF = modeloRF.join(modeloRFLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloRF, modeloRF.columns.takeRight(modeloRF.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/RandomForestPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloRF
 
   }
 
@@ -523,30 +519,29 @@ object MLEnsemble {
     val model = pipeline.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloRFR = model.transform(testData)
-
-    var predictions = modeloRFR.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloRFR = model.transform(testData)
 
     resultadosRegresor(s"Regresor Random Forest Regression: ", "label", "prediction", modeloRFR, inicio)
+
+    modeloRFR = modeloRFR.drop( "indexedFeatures").withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = pipeline.fit(trainingData(i))
-      val modeloRFRLoop = modelLoop.transform(testData)
-      var colPrediction = modeloRFRLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloRFRLoop = modelLoop.transform(testData)
 
       resultadosRegresor(s"Regresor Random Forest Regression: ", "label", "prediction", modeloRFRLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloRFRLoop = modeloRFRLoop.drop( "indexedFeatures", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modeloRFR = modeloRFR.join(modeloRFRLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloRFR, modeloRFR.columns.takeRight(modeloRFR.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/RandomForestRegressionPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloRFR
 
   }
 
@@ -583,30 +578,29 @@ object MLEnsemble {
     val model = pipeline.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloGBT = model.transform(testData)
-
-    var predictions = modeloGBT.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloGBT = model.transform(testData)
 
     resultadosRegresor(s"Regresor Gradient Boosted Tree: ", "label", "prediction", modeloGBT, inicio)
+
+    modeloGBT = modeloGBT.drop("indexedFeatures").withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = pipeline.fit(trainingData(i))
-      val modeloGBTLoop = modelLoop.transform(testData)
-      var colPrediction = modeloGBTLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloGBTLoop = modelLoop.transform(testData)
 
       resultadosRegresor(s"Regresor Gradient Boosted Tree: ", "label", "prediction", modeloGBTLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloGBTLoop = modeloGBTLoop.drop("indexedFeatures", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modeloGBT = modeloGBT.join(modeloGBTLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloGBT, modeloGBT.columns.takeRight(modeloGBT.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/GBTRegressionPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloGBT
 
   }
 
@@ -625,30 +619,29 @@ object MLEnsemble {
     val model = ir.fit(trainingData(inicio))
 
     // Make predictions.
-    val modeloIso = model.transform(testData)
-
-    var predictions = modeloIso.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloIso = model.transform(testData)
 
     resultadosRegresor(s"Regresor Isotonic: ", "label", "prediction", modeloIso, inicio)
+
+    modeloIso = modeloIso.withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = ir.fit(trainingData(i))
-      val modeloIsoLoop = modelLoop.transform(testData)
-      var colPrediction = modeloIsoLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloIsoLoop = modelLoop.transform(testData)
 
       resultadosRegresor(s"Regresor Isotonic: ", "label", "prediction", modeloIsoLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloIsoLoop = modeloIsoLoop.drop("label").withColumnRenamed("prediction", "prediction" + i)
+
+      modeloIso = modeloIso.join(modeloIsoLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloIso, modeloIso.columns.takeRight(modeloIso.columns.length - 1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/IsotonicRegressionPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloIso
 
   }
 
@@ -666,30 +659,29 @@ object MLEnsemble {
     val model = new NaiveBayes().fit(trainingData(inicio))
 
     // Select example rows to display.
-    val modeloNB = model.transform(testData)
-
-    var predictions = modeloNB.select("prediction").withColumnRenamed("prediction", "prediction" + inicio)
-    predictions = predictions.withColumn("ID", monotonically_increasing_id())
+    var modeloNB = model.transform(testData).drop("rawPrediction", "probability")
 
     resultadosClasificador(s"Clasificador Naive Bayes: ", "label", "prediction", modeloNB, inicio)
+
+    modeloNB = modeloNB.withColumnRenamed("prediction", "prediction" + inicio)
 
     for (i <- inicio+1 to fin) {
 
       val modelLoop = new NaiveBayes().fit(trainingData(i))
-      val modeloNBLoop = modelLoop.transform(testData)
-      var colPrediction = modeloNBLoop.select("prediction").withColumnRenamed("prediction", "prediction" + i)
+      var modeloNBLoop = modelLoop.transform(testData)
 
       resultadosClasificador(s"Clasificador Naive Bayes: ", "label", "prediction", modeloNBLoop, i)
 
-      colPrediction = colPrediction.withColumn("ID", monotonically_increasing_id())
-      predictions = predictions.join(colPrediction, predictions("ID") === colPrediction("ID"), "inner").drop("ID")
-      predictions = predictions.withColumn("ID", monotonically_increasing_id())
+      modeloNBLoop = modeloNBLoop.drop("rawPrediction", "probability", "label").withColumnRenamed("prediction", "prediction" + i)
+
+      modeloNB = modeloNB.join(modeloNBLoop, "features")
 
     }
 
-    predictions = predictions.drop("ID")
+    //val ensembleRdd = DFtoRDD(modeloNB, modeloNB.columns.takeRight(modeloNB.columns.length-1))
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/NaiveBayesPredicciones", ensembleRdd.collect().toList)
 
-    predictions
+    modeloNB
 
   }
 
@@ -799,11 +791,27 @@ object MLEnsemble {
   }
 
   /**
-   * FUNCTION TO SAVE OUR MODEL OF CLASSIFICATION ASSEMBLY ON A PREVIOUSLY ESTABLISHED ROUTE
-   * @param path Path where the model will be saved
-   * @param arrayDatos Model that will be a list of integers to be able to save it correctly
+   * FUNCTION TO CONVERT A DATAFRAME TO RDD [DENSEVECTOR]
+   * @param DF Dataframe to convert
+   * @param columns Columns of the dataframe to be converted
+   * @return RDD[DenseVector]
    */
-  def savePredictionEnsembleClass(path: String, arrayDatos: List[Int]): Unit = {
+  def DFtoRDD(DF: DataFrame, columns: Array[String]): RDD[DenseVector] = {
+
+    val assembler = new VectorAssembler().setInputCols(columns).setOutputCol("AllPrediction")
+    var ensemble = assembler.transform(DF).select("AllPrediction")
+    val ensembleRdd = ensemble.rdd.map(row => row.getAs[org.apache.spark.ml.linalg.SparseVector]("AllPrediction").toDense)
+
+    ensembleRdd
+
+  }
+
+  /**
+   * FUNCTION TO SAVE A DENSEVECTOR LIST ON A PRESET ROUTE PER PARAMETER
+   * @param path Path where the model will be saved
+   * @param arrayDatos Model that will be a DenseVector list to be able to save it correctly
+   */
+  def savePredictionEnsemble(path: String, arrayDatos: List[DenseVector]): Unit = {
 
     val file = path
     val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
@@ -811,77 +819,29 @@ object MLEnsemble {
     arrayDatos.map { i => writer.write(i + "\n") }
 
     writer.close()
-
-  }
-
-  /**
-   * FUNCTION TO SAVE OUR MODEL OF THE REGRESSION ASSEMBLY ON A PREVIOUSLY ESTABLISHED ROUTE
-   * @param path Path where the model will be saved
-   * @param arrayDatos Model that will be a list of integers to be able to save it correctly
-   */
-  def savePredictionEnsembleRegr(path: String, arrayDatos: List[Double]): Unit = {
-
-    val file = path
-    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)))
-
-    arrayDatos.map { i => writer.write(i + "\n") }
-
-    writer.close()
-
-  }
-
-  /**
-   * FUNCTION TO LOAD OUR MODEL OF THE ASSEMBLY CLASSIFICATION / RETURN FROM THE ROUTE WHERE WE PREVIOUSLY SAVED IT
-   * @param spark Object to get Spark functionality
-   * @param archivoEntrada Path where the model is located
-   * @return Ensemble model dataframe
-   */
-  def cargaDatosModeloEnsemble(spark: SparkSession, archivoEntrada: String): DataFrame = {
-
-    var DF = spark.read.format("csv")
-      .option("sep", ",")
-      .option("header", "false")
-      .load(archivoEntrada)
-
-    val columnas = DF.dtypes
-
-    //Change numeric values ​​to type Double
-    (0 to columnas.length - 1).map { i =>
-      DF = DF.withColumn(columnas(i)._1, col(columnas(i)._1).cast(DoubleType))
-    }
-
-    DF = DF.withColumnRenamed(columnas(0)._1.toString,"baggingPrediction")
-
-    DF
 
   }
 
   /**
    * FUNCTION THAT ALLOWS US TO UNITE ALL THE PREDICTIONS GENERATED BY ALL THE CLASSIFICATION / REGRESSION METHODS USED
    * @param arrayDF Prediction dataframe array
-   * @param testData Test dataset
-   * @param spark Object to get Spark functionality
    * @return Row Vector RDD of Prediction Array (A vector contains the elements of one of all predictions)
    */
-  def unionDF(arrayDF: ArrayBuffer[DataFrame], testData: DataFrame, spark: SparkSession): RDD[DenseVector]  = {
+  def unionDF(arrayDF: ArrayBuffer[DataFrame]): RDD[DenseVector] = {
 
-    var DFPredicciones = spark.emptyDataFrame
-    DFPredicciones = testData.select("label")
-    DFPredicciones = DFPredicciones.withColumn("ID", monotonically_increasing_id()).drop("label")
+    var DFPredicciones = arrayDF(0)
 
-    (0 to arrayDF.length - 1).map { i =>
+    (1 to arrayDF.length - 1).map { i =>
 
-      arrayDF(i) = arrayDF(i).withColumn("IDArray", monotonically_increasing_id())
-      DFPredicciones = DFPredicciones.join(arrayDF(i), DFPredicciones("ID") === arrayDF(i)("IDArray"),"inner").drop("IDArray").orderBy("ID")
+      arrayDF(i) = arrayDF(i).drop("label")
+      DFPredicciones = DFPredicciones.join(arrayDF(i), "features")
 
     }
 
-    DFPredicciones = DFPredicciones.drop("ID")
+    DFPredicciones = DFPredicciones.drop("features")
 
-    val assembler = new VectorAssembler().setInputCols(DFPredicciones.columns).setOutputCol("AllPrediction")
-    var ensemble = assembler.transform(DFPredicciones).select("AllPrediction")
-
-    val ensembleRdd = ensemble.rdd.map(row => row.getAs[org.apache.spark.ml.linalg.SparseVector]("AllPrediction").toDense)
+    val ensembleRdd = DFtoRDD(DFPredicciones, DFPredicciones.columns)
+    //savePredictionEnsemble("C:/Users/Usuario/Desktop/modelData/Pruebas/joinPredictions", ensembleRdd.collect().toList)
 
     ensembleRdd
 
@@ -893,10 +853,10 @@ object MLEnsemble {
    * @param nClasses Number of classes in the dataset
    * @return RDD of integers, where each element is the winner by vote
    */
-  def clasificacionRow(predictionRDD: RDD[linalg.DenseVector], nClasses: Int): RDD[Int] = {
+  def clasificacionRow(predictionRDD: RDD[DenseVector], nClasses: Int): RDD[(Double, Double)] = {
 
-    val votos = predictionRDD.map { v => var arrayClasses = Array.ofDim[Int](nClasses); v.toArray.map { e => arrayClasses(e.toInt) += 1};
-      val indiceMax = arrayClasses.indexOf(arrayClasses.max); indiceMax }
+    val votos = predictionRDD.map { v => var arrayClasses = Array.ofDim[Int](nClasses); val elementosFila = v.toArray; elementosFila.takeRight(elementosFila.length - 1).map { e => arrayClasses(e.toInt) += 1};
+      val indiceMax = arrayClasses.indexOf(arrayClasses.max); (elementosFila(0), indiceMax.toDouble) }
 
     votos
 
@@ -907,9 +867,9 @@ object MLEnsemble {
    * @param predictionRDD RDD vector predictions
    * @return RDD of doubles, where each element is the mean of all the elements that made up its row of predictions
    */
-  def regressionRow(predictionRDD: RDD[linalg.DenseVector]): RDD[Double] = {
+  def regressionRow(predictionRDD: RDD[linalg.DenseVector]): RDD[(Double, Double)] = {
 
-    val media = predictionRDD.map { v => var media = 0.0; v.toArray.map { e =>  media += e }; media = media/v.toArray.length; media }
+    val media = predictionRDD.map { v => var media = 0.0; val elementosFila = v.toArray; elementosFila.takeRight(elementosFila.length - 1).map { e =>  media += e }; media = media/v.toArray.length; (elementosFila(0), media) }
 
     media
 
@@ -1076,41 +1036,34 @@ object MLEnsemble {
     tiempo(timeClasificadores, "Tiempo realización clasificadores")
 
     val timeTransfPredic = System.currentTimeMillis()/1000
-
-    val RDDPredicciones = unionDF(arrayDF, testData, spark)
-
+    val RDDPredicciones = unionDF(arrayDF)
     tiempo(timeTransfPredic, "Tiempo unión y transformación de las predicciones en vectores por filas")
+
+    import spark.implicits._
 
     if(classRegr == "clasificacion") {
 
       val timeClasificacion = System.currentTimeMillis()/1000
       val clasificacion = clasificacionRow(RDDPredicciones, nClasses)
-      savePredictionEnsembleClass(paramArchivos(3)  + "baggingModel" + nBagging + ".data", clasificacion.collect().toList)
       tiempo(timeClasificacion, "Tiempo realización clasificación por voto y guardado del resultado en fichero")
+
+      val DFBaggingFinal = clasificacion.toDF("label", "baggingPrediction")
+
+      //val ensembleRdd = DFtoRDD(DFBaggingFinal, DFBaggingFinal.columns)
+      //savePredictionEnsemble(paramArchivos(3) + "baggingModel-" + nBagging, ensembleRdd.collect().toList)
+
+      resultadosClasificador(s"RESULTADOS FINALES DEL ENSEMBLE CON CLASIFICACIÓN: ", "label", "baggingPrediction", DFBaggingFinal, nBagging)
 
     } else if(classRegr == "regresion"){
 
       val timeRegresion = System.currentTimeMillis()/1000
       val regresion = regressionRow(RDDPredicciones)
-      savePredictionEnsembleRegr(paramArchivos(3)  + "baggingModel" + nBagging + ".data", regresion.collect().toList)
       tiempo(timeRegresion, "Tiempo realización regresión por media y guardado del resultado en fichero")
 
-    }
+      val DFBaggingFinal = regresion.toDF("label", "baggingPrediction")
 
-    var baggingModelData = cargaDatosModeloEnsemble(spark, paramArchivos(3) + "baggingModel" + nBagging + ".data")
-    baggingModelData = baggingModelData.withColumn("rowID2", monotonically_increasing_id())
-
-    var DFLabelOriginal = spark.emptyDataFrame
-    DFLabelOriginal = testData.select("label")
-    DFLabelOriginal = DFLabelOriginal.withColumn("rowID1", monotonically_increasing_id())
-
-    val DFBaggingFinal = DFLabelOriginal.as("df1").join(baggingModelData.as("df2"), DFLabelOriginal("rowId1") === baggingModelData("rowId2"), "inner").select("df1.label", "df2.baggingPrediction")
-
-    if(classRegr == "clasificacion") {
-
-      resultadosClasificador(s"RESULTADOS FINALES DEL ENSEMBLE CON CLASIFICACIÓN: ","label","baggingPrediction",DFBaggingFinal,nBagging)
-
-    } else if (classRegr == "regresion") {
+      //val ensembleRdd = DFtoRDD(DFBaggingFinal, DFBaggingFinal.columns)
+      //savePredictionEnsemble(paramArchivos(3) + "baggingModel-" + nBagging, ensembleRdd.collect().toList)
 
       resultadosRegresor(s"RESULTADOS FINALES DEL ENSEMBLE CON REGRESIÓN: ","label","baggingPrediction",DFBaggingFinal,nBagging)
 
@@ -1196,7 +1149,6 @@ object MLEnsemble {
         val nFeatures = columnFeatures(0).asInstanceOf[DenseVector].size
 
         val nClasses = sqlRowToInt(DFTest.describe("label").filter("summary = 'max'").select("label").head) + 1
-
         val timeEnsembleBagging = System.currentTimeMillis()/1000
 
         bagging(paramModelosClass.length, paramNumericos(2).toInt, paramNumericos(3).toDouble, paramModelosClass, paramArchivos, DFTrain, DFTest, nClasses, nFeatures, DFTrain, i, paramCR(0), spark)
