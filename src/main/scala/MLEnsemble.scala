@@ -869,7 +869,7 @@ object MLEnsemble {
    */
   def regressionRow(predictionRDD: RDD[linalg.DenseVector]): RDD[(Double, Double)] = {
 
-    val media = predictionRDD.map { v => var media = 0.0; val elementosFila = v.toArray; elementosFila.takeRight(elementosFila.length - 1).map { e =>  media += e }; media = media/v.toArray.length; (elementosFila(0), media) }
+    val media = predictionRDD.map { v => var media = 0.0; val elementosFila = v.toArray; elementosFila.takeRight(elementosFila.length - 1).map { e =>  media += e }; media = media/(elementosFila.length - 1); (elementosFila(0), media) }
 
     media
 
